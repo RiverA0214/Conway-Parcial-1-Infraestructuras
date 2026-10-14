@@ -7,7 +7,7 @@ from life.engines import make_engine, runtime_info
 from life.patterns import PATTERNS, place
 from gui_tablero import Tablero
 
-TAMANOS = ["50", "100", "200", "300"]
+TAMANOS = ["100", "500", "1000"]
 MODOS = {"Hilos": "threads", "Procesos": "processes"}
 WORKERS = ["1", "2", "4", "8", "12"]
 
