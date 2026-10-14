@@ -1,0 +1,514 @@
+{
+  "meta": {
+    "fecha": "2026-10-14 01:40:52",
+    "hardware": {
+      "cpu_model": "12th Gen Intel(R) Core(TM) i5-12450H",
+      "cores": 12
+    },
+    "config": {
+      "sizes": [
+        [
+          100,
+          100
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          1000,
+          1000
+        ]
+      ],
+      "modes": [
+        "sequential",
+        "threads",
+        "processes"
+      ],
+      "workers": [
+        1,
+        2,
+        4,
+        8,
+        12
+      ],
+      "gens": 10,
+      "reps": 3,
+      "warmup": 2,
+      "density": 0.3,
+      "seed": 42,
+      "interpreters": [
+        {
+          "label": "3.14 (GIL)",
+          "cmd": [
+            "/usr/bin/python3"
+          ]
+        },
+        {
+          "label": "3.14t (free-threaded)",
+          "cmd": [
+            "/home/agox/.local/share/uv/python/cpython-3.14.7+freethreaded-linux-x86_64-gnu/bin/python3.14t",
+            "-X",
+            "gil=0"
+          ]
+        },
+        {
+          "label": "3.14t (GIL=1)",
+          "cmd": [
+            "/home/agox/.local/share/uv/python/cpython-3.14.7+freethreaded-linux-x86_64-gnu/bin/python3.14t",
+            "-X",
+            "gil=1"
+          ]
+        }
+      ]
+    },
+    "baseline": "3.14 (GIL)"
+  },
+  "runtime": {
+    "3.14 (GIL)": {
+      "python_version": "3.14.8",
+      "implementation": "cpython",
+      "gil_enabled": true,
+      "free_threaded_build": false,
+      "cpu_count": 12,
+      "executable": "/usr/bin/python3"
+    },
+    "3.14t (free-threaded)": {
+      "python_version": "3.14.7",
+      "implementation": "cpython",
+      "gil_enabled": false,
+      "free_threaded_build": true,
+      "cpu_count": 12,
+      "executable": "/home/agox/.local/share/uv/python/cpython-3.14.7+freethreaded-linux-x86_64-gnu/bin/python3.14t"
+    },
+    "3.14t (GIL=1)": {
+      "python_version": "3.14.7",
+      "implementation": "cpython",
+      "gil_enabled": true,
+      "free_threaded_build": true,
+      "cpu_count": 12,
+      "executable": "/home/agox/.local/share/uv/python/cpython-3.14.7+freethreaded-linux-x86_64-gnu/bin/python3.14t"
+    }
+  },
+  "rows": [
+    {
+      "rows": 100,
+      "cols": 100,
+      "mode": "sequential",
+      "workers": 1,
+      "gens": 10,
+      "reps": 3,
+      "setup_s": 1.4998004189692438e-05,
+      "times_s": [
+        0.01209948600444477,
+        0.012414115990395658,
+        0.012201809004181996
+      ],
+      "median_s": 0.012201809004181996,
+      "min_s": 0.01209948600444477,
+      "max_s": 0.012414115990395658,
+      "step_ms": 1.2201809004181996,
+      "hash": "b467d3367d4e92ce99789bcd64aa69d3",
+      "valid": true,
+      "label": "3.14 (GIL)",
+      "speedup": 1.0,
+      "efficiency": 1.0,
+      "speedup_global": 1.0
+    },
+    {
+      "rows": 100,
+      "cols": 100,
+      "mode": "threads",
+      "workers": 1,
+      "gens": 10,
+      "reps": 3,
+      "setup_s": 0.000269349999143742,
+      "times_s": [
+        0.016644240997266024,
+        0.013930682005593553,
+        0.01389748499786947
+      ],
+      "median_s": 0.013930682005593553,
+      "min_s": 0.01389748499786947,
+      "max_s": 0.016644240997266024,
+      "step_ms": 1.3930682005593553,
+      "hash": "b467d3367d4e92ce99789bcd64aa69d3",
+      "valid": true,
+      "label": "3.14 (GIL)",
+      "speedup": 0.8758945900339002,
+      "efficiency": 0.8758945900339002,
+      "speedup_global": 0.8758945900339002
+    },
+    {
+      "rows": 100,
+      "cols": 100,
+      "mode": "threads",
+      "workers": 2,
+      "gens": 10,
+      "reps": 3,
+      "setup_s": 0.00021369800379034132,
+      "times_s": [
+        0.01866481199976988,
+        0.015648141998099163,
+        0.016723973996704444
+      ],
+      "median_s": 0.016723973996704444,
+      "min_s": 0.015648141998099163,
+      "max_s": 0.01866481199976988,
+      "step_ms": 1.6723973996704444,
+      "hash": "b467d3367d4e92ce99789bcd64aa69d3",
+      "valid": true,
+      "label": "3.14 (GIL)",
+      "speedup": 0.7295998550695207,
+      "efficiency": 0.36479992753476037,
+      "speedup_global": 0.7295998550695207
+    },
+    {
+      "rows": 100,
+      "cols": 100,
+      "mode": "threads",
+      "workers": 4,
+      "gens": 10,
+      "reps": 3,
+      "setup_s": 0.0003881390002788976,
+      "times_s": [
+        0.01899004599545151,
+        0.022056732996134087,
+        0.02082274798885919
+      ],
+      "median_s": 0.02082274798885919,
+      "min_s": 0.01899004599545151,
+      "max_s": 0.022056732996134087,
+      "step_ms": 2.082274798885919,
+      "hash": "b467d3367d4e92ce99789bcd64aa69d3",
+      "valid": true,
+      "label": "3.14 (GIL)",
+      "speedup": 0.5859845689296311,
+      "efficiency": 0.14649614223240778,
+      "speedup_global": 0.5859845689296311
+    },
+    {
+      "rows": 100,
+      "cols": 100,
+      "mode": "threads",
+      "workers": 8,
+      "gens": 10,
+      "reps": 3,
+      "setup_s": 0.0006409979978343472,
+      "times_s": [
+        0.022443280002335086,
+        0.02440529399609659,
+        0.02623996698821429
+      ],
+      "median_s": 0.02440529399609659,
+      "min_s": 0.022443280002335086,
+      "max_s": 0.02623996698821429,
+      "step_ms": 2.440529399609659,
+      "hash": "b467d3367d4e92ce99789bcd64aa69d3",
+      "valid": true,
+      "label": "3.14 (GIL)",
+      "speedup": 0.4999656634389886,
+      "efficiency": 0.06249570792987357,
+      "speedup_global": 0.4999656634389886
+    },
+    {
+      "rows": 100,
+      "cols": 100,
+      "mode": "threads",
+      "workers": 12,
+      "gens": 10,
+      "reps": 3,
+      "setup_s": 0.0010737800039350986,
+      "times_s": [
+        0.021604919995297678,
+        0.021187821999774314,
+        0.02617324200400617
+      ],
+      "median_s": 0.021604919995297678,
+      "min_s": 0.021187821999774314,
+      "max_s": 0.02617324200400617,
+      "step_ms": 2.160491999529768,
+      "hash": "b467d3367d4e92ce99789bcd64aa69d3",
+      "valid": true,
+      "label": "3.14 (GIL)",
+      "speedup": 0.5647699230933383,
+      "efficiency": 0.04706416025777819,
+      "speedup_global": 0.5647699230933383
+    },
+    {
+      "rows": 100,
+      "cols": 100,
+      "mode": "processes",
+      "workers": 1,
+      "gens": 10,
+      "reps": 3,
+      "setup_s": 0.06536454999877606,
+      "times_s": [
+        0.03048767999280244,
+        0.03548669599695131,
+        0.02443073899485171
+      ],
+      "median_s": 0.03048767999280244,
+      "min_s": 0.02443073899485171,
+      "max_s": 0.03548669599695131,
+      "step_ms": 3.048767999280244,
+      "hash": "b467d3367d4e92ce99789bcd64aa69d3",
+      "valid": true,
+      "label": "3.14 (GIL)",
+      "speedup": 0.40022097473676616,
+      "efficiency": 0.40022097473676616,
+      "speedup_global": 0.40022097473676616
+    },
+    {
+      "rows": 100,
+      "cols": 100,
+      "mode": "processes",
+      "workers": 2,
+      "gens": 10,
+      "reps": 3,
+      "setup_s": 0.003278721997048706,
+      "times_s": [
+        0.031051591999130324,
+        0.026749650001875125,
+        0.024516762990970165
+      ],
+      "median_s": 0.026749650001875125,
+      "min_s": 0.024516762990970165,
+      "max_s": 0.031051591999130324,
+      "step_ms": 2.6749650001875125,
+      "hash": "b467d3367d4e92ce99789bcd64aa69d3",
+      "valid": true,
+      "label": "3.14 (GIL)",
+      "speedup": 0.45614836094403705,
+      "efficiency": 0.22807418047201852,
+      "speedup_global": 0.45614836094403705
+    },
+    {
+      "rows": 100,
+      "cols": 100,
+      "mode": "processes",
+      "workers": 4,
+      "gens": 10,
+      "reps": 3,
+      "setup_s": 0.005754843994509429,
+      "times_s": [
+        0.031483159007621,
+        0.03286359399498906,
+        0.03528667500359006
+      ],
+      "median_s": 0.03286359399498906,
+      "min_s": 0.031483159007621,
+      "max_s": 0.03528667500359006,
+      "step_ms": 3.286359399498906,
+      "hash": "b467d3367d4e92ce99789bcd64aa69d3",
+      "valid": true,
+      "label": "3.14 (GIL)",
+      "speedup": 0.3712865064619071,
+      "efficiency": 0.09282162661547677,
+      "speedup_global": 0.3712865064619071
+    },
+    {
+      "rows": 100,
+      "cols": 100,
+      "mode": "processes",
+      "workers": 8,
+      "gens": 10,
+      "reps": 3,
+      "setup_s": 0.011467728007119149,
+      "times_s": [
+        0.012208129002829082,
+        0.017868662005639635,
+        0.023744870006339625
+      ],
+      "median_s": 0.017868662005639635,
+      "min_s": 0.012208129002829082,
+      "max_s": 0.023744870006339625,
+      "step_ms": 1.7868662005639635,
+      "hash": "b467d3367d4e92ce99789bcd64aa69d3",
+      "valid": true,
+      "label": "3.14 (GIL)",
+      "speedup": 0.6828608096303411,
+      "efficiency": 0.08535760120379264,
+      "speedup_global": 0.6828608096303411
+    },
+    {
+      "rows": 100,
+      "cols": 100,
+      "mode": "processes",
+      "workers": 12,
+      "gens": 10,
+      "reps": 3,
+      "setup_s": 0.02180776299792342,
+      "times_s": [
+        0.014193042006809264,
+        0.011343550999299623,
+        0.010131839997484349
+      ],
+      "median_s": 0.011343550999299623,
+      "min_s": 0.010131839997484349,
+      "max_s": 0.014193042006809264,
+      "step_ms": 1.1343550999299623,
+      "hash": "b467d3367d4e92ce99789bcd64aa69d3",
+      "valid": true,
+      "label": "3.14 (GIL)",
+      "speedup": 1.075660435161385,
+      "efficiency": 0.08963836959678208,
+      "speedup_global": 1.075660435161385
+    },
+    {
+      "rows": 500,
+      "cols": 500,
+      "mode": "sequential",
+      "workers": 1,
+      "gens": 10,
+      "reps": 3,
+      "setup_s": 0.00026816398894879967,
+      "times_s": [
+        0.37044261999835726,
+        0.37132064599427395,
+        0.4025871420017211
+      ],
+      "median_s": 0.37132064599427395,
+      "min_s": 0.37044261999835726,
+      "max_s": 0.4025871420017211,
+      "step_ms": 37.132064599427395,
+      "hash": "a9513e461c979e349a0539bf538340bc",
+      "valid": true,
+      "label": "3.14 (GIL)",
+      "speedup": 1.0,
+      "efficiency": 1.0,
+      "speedup_global": 1.0
+    },
+    {
+      "rows": 500,
+      "cols": 500,
+      "mode": "threads",
+      "workers": 1,
+      "gens": 10,
+      "reps": 3,
+      "setup_s": 0.0003566450031939894,
+      "times_s": [
+        0.42227267000998836,
+        0.36504517000867054,
+        0.3676495569961844
+      ],
+      "median_s": 0.3676495569961844,
+      "min_s": 0.36504517000867054,
+      "max_s": 0.42227267000998836,
+      "step_ms": 36.76495569961844,
+      "hash": "a9513e461c979e349a0539bf538340bc",
+      "valid": true,
+      "label": "3.14 (GIL)",
+      "speedup": 1.0099852942244336,
+      "efficiency": 1.0099852942244336,
+      "speedup_global": 1.0099852942244336
+    },
+    {
+      "rows": 500,
+      "cols": 500,
+      "mode": "threads",
+      "workers": 2,
+      "gens": 10,
+      "reps": 3,
+      "setup_s": 0.0004558540094876662,
+      "times_s": [
+        0.37523589900229126,
+        0.3701588370022364,
+        0.3802264219993958
+      ],
+      "median_s": 0.37523589900229126,
+      "min_s": 0.3701588370022364,
+      "max_s": 0.3802264219993958,
+      "step_ms": 37.523589900229126,
+      "hash": "a9513e461c979e349a0539bf538340bc",
+      "valid": true,
+      "label": "3.14 (GIL)",
+      "speedup": 0.9895658890355973,
+      "efficiency": 0.49478294451779864,
+      "speedup_global": 0.9895658890355973
+    },
+    {
+      "rows": 500,
+      "cols": 500,
+      "mode": "threads",
+      "workers": 4,
+      "gens": 10,
+      "reps": 3,
+      "setup_s": 0.0005664189957315102,
+      "times_s": [
+        0.4200923050084384,
+        0.402369143004762,
+        0.39479894199757837
+      ],
+      "median_s": 0.402369143004762,
+      "min_s": 0.39479894199757837,
+      "max_s": 0.4200923050084384,
+      "step_ms": 40.2369143004762,
+      "hash": "a9513e461c979e349a0539bf538340bc",
+      "valid": true,
+      "label": "3.14 (GIL)",
+      "speedup": 0.9228357900940714,
+      "efficiency": 0.23070894752351784,
+      "speedup_global": 0.9228357900940714
+    },
+    {
+      "rows": 500,
+      "cols": 500,
+      "mode": "threads",
+      "workers": 8,
+      "gens": 10,
+      "reps": 3,
+      "setup_s": 0.0010118960053659976,
+      "times_s": [
+        0.4274983529903693,
+        0.43546408899419475,
+        0.4342836680007167
+      ],
+      "median_s": 0.4342836680007167,
+      "min_s": 0.4274983529903693,
+      "max_s": 0.43546408899419475,
+      "step_ms": 43.42836680007167,
+      "hash": "a9513e461c979e349a0539bf538340bc",
+      "valid": true,
+      "label": "3.14 (GIL)",
+      "speedup": 0.8550186740931301,
+      "efficiency": 0.10687733426164127,
+      "speedup_global": 0.8550186740931301
+    },
+    {
+      "rows": 500,
+      "cols": 500,
+      "mode": "threads",
+      "workers": 12,
+      "gens": 10,
+      "reps": 3,
+      "setup_s": 0.0009233279997715726,
+      "times_s": [
+        0.4602397179987747,
+        0.4632719729997916,
+        0.46052821099874564
+      ],
+      "median_s": 0.46052821099874564,
+      "min_s": 0.4602397179987747,
+      "max_s": 0.4632719729997916,
+      "step_ms": 46.05282109987456,
+      "hash": "a9513e461c979e349a0539bf538340bc",
+      "valid": true,
+      "label": "3.14 (GIL)",
+      "speedup": 0.8062929417266151,
+      "efficiency": 0.06719107847721793,
+      "speedup_global": 0.8062929417266151
+    },
+    {
+      "rows": 500,
+      "cols": 500,
+      "mode": "processes",
+      "workers": 1,
+      "gens": 10,
+      "reps": 3,
+      "setup_s": 0.0017262580076931044,
+      "times_s": [
+        0.5626300650037592,
+        0.5059284290036885,
+        0.5272714409948094
+      ],
