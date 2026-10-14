@@ -12,7 +12,7 @@ from life.patterns import PATTERNS, place
 from .simulador import Simulador
 from .tablero import Tablero
 
-TAMANOS = ["100", "500", "1000"]
+TAMANOS = {"100 × 100": 100, "500 × 500": 500, "1000 × 1000": 1000}   # filas × columnas
 MODOS = {"Hilos": "threads", "Procesos": "processes"}
 WORKERS = ["1", "2", "4", "8", "12"]
 REFRESCO_MS = 33           # la interfaz mira si hay un frame nuevo ~30 veces por segundo
@@ -45,7 +45,7 @@ class App(ctk.CTk):
     def construir_controles(self):
         barra = ctk.CTkFrame(self)
         barra.pack(fill="x", padx=8, pady=(8, 0))
-        self.tamano = self.opcion(barra, "Tamaño", TAMANOS, "100", 80)
+        self.tamano = self.opcion(barra, "Tamaño (filas × columnas)", list(TAMANOS), "100 × 100", 120)
         self.modo = self.opcion(barra, "Modo", list(MODOS), "Hilos", 100)
         self.workers = self.opcion(barra, "Workers", WORKERS, "4", 70)
         self.patron = self.opcion(barra, "Patrón", list(PATTERNS), "glider", 110, recrear=False)
@@ -121,7 +121,7 @@ class App(ctk.CTk):
         # nuevo tamaño, modo o workers: se crea otro simulador (con motores nuevos)
         if self.sim:
             self.sim.cerrar()
-        self.n = int(self.tamano.get())
+        self.n = TAMANOS[self.tamano.get()]
         workers = int(self.workers.get())
         self.sim = Simulador(self.n, MODOS[self.modo.get()], workers)
         self.cambiar_retardo(self.retardo.get())
