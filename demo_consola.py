@@ -1,3 +1,8 @@
+"""Demo por consola: corre la simulación secuencial y la de hilos sobre un tablero pequeño e imprime el resultado.
+
+    python demo_consola.py
+"""
+
 import time
 
 from life.core import from_matrix, to_matrix
