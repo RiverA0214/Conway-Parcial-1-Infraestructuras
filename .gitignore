@@ -1,0 +1,10 @@
+# entornos y caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Los resultados (results/*.json, results/*.csv) SI se versionan
+
+# grafo de graphify (local)
+graphify-out/
