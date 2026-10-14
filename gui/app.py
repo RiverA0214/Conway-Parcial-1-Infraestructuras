@@ -10,7 +10,8 @@ from life.engines import runtime_info
 from life.patterns import PATTERNS, place
 
 from .simulador import Simulador
-from .tablero import Tablero
+from .tablero import LADO, Tablero
+from .vista import Vista
 
 TAMANOS = {"100 × 100": 100, "500 × 500": 500, "1000 × 1000": 1000}   # filas × columnas
 MODOS = {"Hilos": "threads", "Procesos": "processes"}
@@ -33,6 +34,7 @@ class App(ctk.CTk):
         self.sim: Simulador | None = None
         self.n = 0
         self.dibujado = 0          # id del último frame dibujado
+        self.vista = Vista(LADO)   # zoom y desplazamiento, compartidos por los dos tableros
         self.construir_controles()
         self.construir_tableros()
         self.construir_resumen()
@@ -65,9 +67,9 @@ class App(ctk.CTk):
     def construir_tableros(self):
         zona = ctk.CTkFrame(self, fg_color="transparent")
         zona.pack(padx=8, pady=4)
-        self.tab_seq = Tablero(zona, self.pintar)
+        self.tab_seq = Tablero(zona, self.vista, self.pintar, self.redibujar)
         self.tab_seq.pack(side="left", padx=4)
-        self.tab_par = Tablero(zona, self.pintar)
+        self.tab_par = Tablero(zona, self.vista, self.pintar, self.redibujar)
         self.tab_par.pack(side="left", padx=4)
         self.tab_seq.titulo.configure(text="Secuencial")
 
@@ -124,12 +126,18 @@ class App(ctk.CTk):
         self.n = TAMANOS[self.tamano.get()]
         workers = int(self.workers.get())
         self.sim = Simulador(self.n, MODOS[self.modo.get()], workers)
+        self.dibujado = 0          # el simulador nuevo numera sus frames desde 1
         self.cambiar_retardo(self.retardo.get())
         self.tab_par.titulo.configure(text=f"Paralelo: {self.modo.get()} x{workers}")
+        self.vista.configurar(self.n)
         self.tab_seq.configurar(self.n)
         self.tab_par.configurar(self.n)
         self.error.configure(text="")
         self.sim.cargar(random_grid(self.n, self.n))
+
+    def redibujar(self):
+        self.tab_seq.redibujar()
+        self.tab_par.redibujar()
 
     def cambiar_retardo(self, ms):
         if self.sim:
