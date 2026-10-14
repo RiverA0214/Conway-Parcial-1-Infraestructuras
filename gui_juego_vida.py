@@ -4,7 +4,7 @@ import threading
 import tkinter as tk
 from tkinter import ttk
 
-from juego_vida import work_sec, work_section, split_rows
+from juego_vida import work_section, split_rows, make_padded
 
 
 COLOR_VIVA = "#2b2b2b"
@@ -12,26 +12,24 @@ COLOR_MUERTA = "#ffffff"
 COLOR_LINEA = "#dddddd"
 
 
-def par_step(mat: list[list[str]], num_threads: int):
+def par_step(read: list[list[int]], write: list[list[int]], num_threads: int) -> bool:
     # Una sola generación en paralelo: cada hilo lee la matriz completa
-    # y escribe solo en su bloque de filas; al terminar (join) se juntan
-    # los bloques en la nueva matriz de solo lectura.
-    n = len(mat)
+    # y escribe solo en su bloque de filas de `write`; al terminar (join)
+    # `write` ya contiene la nueva generación completa.
+    n = len(read) - 2
     num_threads = max(1, min(num_threads, n))
     ranges = split_rows(n, num_threads)
-    write_mats = [[['.'] * n for _ in range(end - start)] for start, end in ranges]
     changed = [False] * num_threads
 
     def worker(t: int):
         start, end = ranges[t]
-        changed[t] = work_section(mat, write_mats[t], start, end)
+        changed[t] = work_section(read, write, start, end)
 
     threads = [threading.Thread(target=worker, args=(t,)) for t in range(num_threads)]
     for th in threads: th.start()
     for th in threads: th.join()
 
-    new_mat = [row for wm in write_mats for row in wm]
-    return new_mat, any(changed)
+    return any(changed)
 
 
 class GameOfLifeApp:
@@ -41,13 +39,13 @@ class GameOfLifeApp:
         self.root.title("Juego de la Vida")
 
         self.n = 30
-        self.mat = [['.'] * self.n for _ in range(self.n)]
+        self.new_boards()
         self.running = False
         self.after_id = None
         self.generation = 1
         self.total_time = 0.0
         self.count = 0
-        self.paint_state = '*'
+        self.paint_state = 1
 
         # --- controles ---
         controls = ttk.Frame(root, padding=8)
@@ -101,6 +99,11 @@ class GameOfLifeApp:
 
     # ---------- tablero ----------
 
+    def new_boards(self):
+        # matriz actual y buffer de escritura (ping-pong), ambas con padding
+        self.mat = make_padded(self.n)
+        self.buf = make_padded(self.n)
+
     def build_grid(self):
         self.canvas.delete("all")
         self.cell = max(4, min(20, 640 // self.n))
@@ -111,20 +114,20 @@ class GameOfLifeApp:
             row = []
             for j in range(self.n):
                 x, y = j * self.cell, i * self.cell
-                color = COLOR_VIVA if self.mat[i][j] == '*' else COLOR_MUERTA
+                color = COLOR_VIVA if self.mat[i + 1][j + 1] else COLOR_MUERTA
                 row.append(self.canvas.create_rectangle(x, y, x + self.cell, y + self.cell,
                                                         fill=color, outline=COLOR_LINEA))
             self.rects.append(row)
 
     def draw_cell(self, i: int, j: int):
-        color = COLOR_VIVA if self.mat[i][j] == '*' else COLOR_MUERTA
+        color = COLOR_VIVA if self.mat[i + 1][j + 1] else COLOR_MUERTA
         self.canvas.itemconfig(self.rects[i][j], fill=color)
 
     def redraw(self, old: list[list[str]]):
         # solo se repintan las celdas que cambiaron
         for i in range(self.n):
             for j in range(self.n):
-                if old[i][j] != self.mat[i][j]:
+                if old[i + 1][j + 1] != self.mat[i + 1][j + 1]:
                     self.draw_cell(i, j)
 
     def cell_at(self, event):
@@ -139,8 +142,8 @@ class GameOfLifeApp:
         if pos is None: return
         i, j = pos
         # si haces clic en una viva, arrastrar borra; si es muerta, arrastrar pinta
-        self.paint_state = '.' if self.mat[i][j] == '*' else '*'
-        self.mat[i][j] = self.paint_state
+        self.paint_state = 0 if self.mat[i + 1][j + 1] else 1
+        self.mat[i + 1][j + 1] = self.paint_state
         self.draw_cell(i, j)
 
     def on_drag(self, event):
@@ -148,8 +151,8 @@ class GameOfLifeApp:
         pos = self.cell_at(event)
         if pos is None: return
         i, j = pos
-        if self.mat[i][j] != self.paint_state:
-            self.mat[i][j] = self.paint_state
+        if self.mat[i + 1][j + 1] != self.paint_state:
+            self.mat[i + 1][j + 1] = self.paint_state
             self.draw_cell(i, j)
 
     # ---------- botones ----------
@@ -161,14 +164,18 @@ class GameOfLifeApp:
         except (tk.TclError, ValueError):
             return
         self.n = max(5, min(150, n))
-        self.mat = [['.'] * self.n for _ in range(self.n)]
+        self.new_boards()
         self.generation = 1
         self.reset_stats()
         self.build_grid()
 
     def randomize(self):
         self.stop()
-        self.mat = [['*' if random.random() < 0.3 else '.' for _ in range(self.n)] for _ in range(self.n)]
+        self.new_boards()
+        for i in range(1, self.n + 1):
+            for j in range(1, self.n + 1):
+                if random.random() < 0.3:
+                    self.mat[i][j] = 1
         self.generation = 1
         self.reset_stats()
         self.build_grid()
@@ -177,12 +184,12 @@ class GameOfLifeApp:
         self.clear()
         for i, j in [(0, 1), (1, 2), (2, 0), (2, 1), (2, 2)]:
             if i < self.n and j < self.n:
-                self.mat[i][j] = '*'
+                self.mat[i + 1][j + 1] = 1
                 self.draw_cell(i, j)
 
     def clear(self):
         self.stop()
-        self.mat = [['.'] * self.n for _ in range(self.n)]
+        self.new_boards()
         self.generation = 1
         self.reset_stats()
         self.build_grid()
@@ -217,13 +224,13 @@ class GameOfLifeApp:
         # solo se mide el cálculo de la generación, no el dibujo ni la espera
         start = time.perf_counter()
         if self.mode_var.get() == "Secuencial":
-            new_mat, changed = work_sec(self.mat)
+            changed = work_section(self.mat, self.buf, 0, self.n)
         else:
-            new_mat, changed = par_step(self.mat, num_threads)
+            changed = par_step(self.mat, self.buf, num_threads)
         elapsed = time.perf_counter() - start
 
         old = self.mat
-        self.mat = new_mat
+        self.mat, self.buf = self.buf, old   # ping-pong
         self.generation += 1
         self.last_time = elapsed
         self.total_time += elapsed

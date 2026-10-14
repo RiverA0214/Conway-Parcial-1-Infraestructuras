@@ -5,33 +5,32 @@ import threading
 
 
 
-# . empty
-# * cell
+# Representación: matriz con padding de (n+2) x (n+2) enteros 0/1.
+#   0 = celda muerta, 1 = celda viva
+# El tablero real ocupa las posiciones 1..n; el borde (fila/columna 0 y n+1)
+# siempre vale 0 y nunca se escribe, así que los 8 vecinos se suman sin
+# comprobar límites.
 
-# right, left, up, down
-# upper right, upper left
-# lower right, lower left
-dx = [1,-1,0,0,1,-1,1,-1]
-dy = [0,0,-1,1,-1,-1,1,1]
+def make_padded(n: int) -> list[list[int]]:
+    return [[0] * (n + 2) for _ in range(n + 2)]
 
-def is_valid(mat: list[list[str]],i: int, j: int) -> int:
-    n: int = len(mat)
-    if i >= 0 and i < n and j  >= 0 and j < n and mat[i][j] == '*':
-        return 1
-    return 0
+def from_chars(rows: list[list[str]]) -> list[list[int]]:
+    # '*' -> 1, '.' -> 0, agregando el padding
+    n = len(rows)
+    mat = make_padded(n)
+    for i in range(n):
+        for j in range(n):
+            if rows[i][j] == '*':
+                mat[i + 1][j + 1] = 1
+    return mat
 
-def count_neighboors(mat: list[list[str]], i: int, j: int) -> int:
-    count = 0
-    for k in range(8):
-        count += is_valid(mat,i + dx[k], j + dy[k])
-    return count
+def to_chars(mat: list[list[int]]) -> list[list[str]]:
+    n = len(mat) - 2
+    return [['*' if mat[i][j] else '.' for j in range(1, n + 1)] for i in range(1, n + 1)]
 
-def print_matrix(mat: list[list[str]]):
-
-    for row in mat:
-        for c in row:
-            print(c,end="")
-        print()
+def print_matrix(mat: list[list[int]]):
+    for row in to_chars(mat):
+        print("".join(row))
 
 def timeit(fn, *args):
     start = time.perf_counter()
@@ -41,81 +40,71 @@ def timeit(fn, *args):
 
 
 # ------------------------------------------------------------------
+# Kernel: calcula la siguiente generación de un bloque de filas
+#
+# Lee de `read` (todo el tablero) y escribe en `write` SOLO las filas
+# [start, end) del tablero real (índices sin padding). Devuelve True si
+# alguna celda de su bloque cambió.
+# ------------------------------------------------------------------
+
+def work_section(read: list[list[int]], write: list[list[int]], start: int, end: int) -> bool:
+    n: int = len(read) - 2
+    changed: bool = False
+
+    for i in range(start + 1, end + 1):   # +1 por el padding
+        up, cur, down, out = read[i - 1], read[i], read[i + 1], write[i]
+        for j in range(1, n + 1):
+            s = (up[j - 1] + up[j] + up[j + 1] +
+                 cur[j - 1]        + cur[j + 1] +
+                 down[j - 1] + down[j] + down[j + 1])
+            c = cur[j]
+            new = 1 if (s == 3 or (c and s == 2)) else 0
+            out[j] = new
+            if new != c:
+                changed = True
+
+    return changed
+
+
+# ------------------------------------------------------------------
 # Versión secuencial
 # ------------------------------------------------------------------
 
-def work_sec(mat: list[list[str]]):
-    n: int = len(mat)
-    new_mat: list[list[str]] = [['.'] * n for _ in range(n)]
+def sec(mat: list[list[int]], max_steps: int = 1000, show: bool = True):
+    n: int = len(mat) - 2
+    # dos matrices que se alternan (ping-pong); no se modifica la de entrada
+    read = [row[:] for row in mat]
+    write = make_padded(n)
 
-    lives: bool = False   # True si alguna celda cambió en esta generación
-
-    for i in range(n):
-        for j in range(n):
-            neighboors = count_neighboors(mat,i,j)
-            if mat[i][j] == '.' and neighboors == 3:
-                lives = True
-                new_mat[i][j] = '*'
-                continue
-            if mat[i][j] == '.': continue
-
-            if neighboors < 2 or neighboors > 3:
-                lives = True
-                new_mat[i][j] = '.'
-            else:
-                new_mat[i][j] = mat[i][j]
-
-    return new_mat, lives
-
-def sec(mat: list[list[str]], max_steps: int = 1000, show: bool = True):
-
-    new_mat: list[list[str]] = mat
     steps = 1
     if show:
         print(f"{steps = }")
-        print_matrix(new_mat)
+        print_matrix(read)
     while True:
         steps += 1
-        new_mat, lives = work_sec(new_mat)
+        changed = work_section(read, write, 0, n)
+        read, write = write, read
         if show:
             print(f"{steps = }")
-            print_matrix(new_mat)
+            print_matrix(read)
             time.sleep(0.5)
         # max_steps evita un ciclo infinito con patrones que oscilan (ej. blinker)
-        if not lives or steps >= max_steps: break
-    return new_mat
+        if not changed or steps >= max_steps: break
+    return read
 
 
 # ------------------------------------------------------------------
 # Versión paralela (hilos)
 #
-# - Todos los hilos comparten la matriz de SOLO LECTURA de la generación actual.
-# - Cada hilo tiene su propia matriz de ESCRITURA con un bloque de filas
-#   [start, end); solo escribe ahí, así que no hay condiciones de carrera.
-# - Una barrera espera a que todos terminen su bloque. Cuando llega el último,
-#   la acción de la barrera junta todos los bloques en una matriz grande nueva,
-#   que pasa a ser la matriz de solo lectura del siguiente ciclo.
+# - Hay dos matrices completas que se alternan (ping-pong): en cada
+#   generación todos los hilos LEEN de una (solo lectura) y ESCRIBEN en la
+#   otra, cada uno únicamente en su bloque de filas [start, end); como los
+#   bloques son disjuntos no hay condiciones de carrera.
+# - Una barrera espera a que todos terminen. Cuando llega el último, la
+#   acción de la barrera solo intercambia las dos referencias (O(1)): la
+#   matriz recién escrita pasa a ser la de lectura del siguiente ciclo.
+#   No se copia nada.
 # ------------------------------------------------------------------
-
-def work_section(read_mat: list[list[str]], write_mat: list[list[str]], start: int, end: int) -> bool:
-    n: int = len(read_mat)
-    lives: bool = False
-
-    for i in range(start, end):
-        row = write_mat[i - start]   # fila local dentro del bloque del hilo
-        for j in range(n):
-            neighboors = count_neighboors(read_mat, i, j)
-            cell = read_mat[i][j]
-            if cell == '.' and neighboors == 3:
-                lives = True
-                row[j] = '*'
-            elif cell == '*' and (neighboors < 2 or neighboors > 3):
-                lives = True
-                row[j] = '.'
-            else:
-                row[j] = cell
-
-    return lives
 
 def split_rows(n: int, num_threads: int) -> list[tuple[int, int]]:
     # reparte n filas en bloques lo más parejos posible
@@ -128,17 +117,16 @@ def split_rows(n: int, num_threads: int) -> list[tuple[int, int]]:
         start = end
     return ranges
 
-def par(mat: list[list[str]], num_threads: int = 4, max_steps: int = 1000, show: bool = True):
-    n: int = len(mat)
+def par(mat: list[list[int]], num_threads: int = 4, max_steps: int = 1000, show: bool = True):
+    n: int = len(mat) - 2
     num_threads = max(1, min(num_threads, n))
     ranges = split_rows(n, num_threads)
 
-    # una matriz de escritura por hilo (solo sus filas)
-    write_mats = [[['.'] * n for _ in range(end - start)] for start, end in ranges]
     # cada hilo escribe únicamente en su posición -> sin carreras
     changed: list[bool] = [False] * num_threads
 
-    state = {'read': mat, 'steps': 1, 'stop': False}
+    # no se modifica la matriz de entrada
+    state = {'read': [row[:] for row in mat], 'write': make_padded(n), 'steps': 1, 'stop': False}
 
     if show:
         print(f"steps = {state['steps']}")
@@ -146,9 +134,8 @@ def par(mat: list[list[str]], num_threads: int = 4, max_steps: int = 1000, show:
 
     def merge():
         # La ejecuta UN solo hilo, cuando todos llegaron a la barrera
-        # y antes de liberarlos. Copiamos las filas porque los write_mats
-        # se reutilizan en el siguiente ciclo.
-        state['read'] = [row[:] for wm in write_mats for row in wm]
+        # y antes de liberarlos.
+        state['read'], state['write'] = state['write'], state['read']
         state['steps'] += 1
         if show:
             print(f"steps = {state['steps']}")
@@ -162,7 +149,7 @@ def par(mat: list[list[str]], num_threads: int = 4, max_steps: int = 1000, show:
     def worker(t: int):
         start, end = ranges[t]
         while True:
-            changed[t] = work_section(state['read'], write_mats[t], start, end)
+            changed[t] = work_section(state['read'], state['write'], start, end)
             barrier.wait()          # aquí se ejecuta merge()
             if state['stop']:
                 break
@@ -178,9 +165,14 @@ def par(mat: list[list[str]], num_threads: int = 4, max_steps: int = 1000, show:
 # Pruebas de rendimiento
 # ------------------------------------------------------------------
 
-def random_matrix(n: int, density: float = 0.3, seed: int = 42) -> list[list[str]]:
+def random_matrix(n: int, density: float = 0.3, seed: int = 42) -> list[list[int]]:
     rng = random.Random(seed)
-    return [['*' if rng.random() < density else '.' for _ in range(n)] for _ in range(n)]
+    mat = make_padded(n)
+    for i in range(1, n + 1):
+        for j in range(1, n + 1):
+            if rng.random() < density:
+                mat[i][j] = 1
+    return mat
 
 def benchmark(sizes=(100, 500, 1000), threads=(1, 2, 4, 8), generations: int = 10):
     results = {}   # results[n] = {'sec': t, num_threads: t, ...}
@@ -215,7 +207,7 @@ def plot_speedup(results, threads=(1, 2, 4, 8), filename: str = "speedup.png"):
     print(f"gráfica guardada en {filename}")
 
 
-def main(start_mat: list[list[str]]):
+def main(start_mat: list[list[int]]):
 
     result, sec_time = timeit(sec, start_mat)
     print(f"secuencial: {sec_time: .6f}s")
@@ -252,8 +244,8 @@ tablero_pequeno = [
 if __name__ == '__main__':
     # with open('matrix.json', 'r') as file:
     #     data = json.load(file)
-    #     main(data)
-    main(tablero_test)
+    #     main(from_chars(data))
+    main(from_chars(tablero_test))
 
     # Para el análisis de rendimiento (tarda varios minutos con 1000x1000):
     results = benchmark()
