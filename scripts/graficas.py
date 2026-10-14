@@ -1,4 +1,4 @@
-"""Genera las gráficas del informe a partir del JSON de bench.py.
+"""Genera las gráficas del informe a partir del JSON de `python -m benchmark`.
 
 Uso: uv run --no-project --with matplotlib python scripts/graficas.py results/bench-XXXX.json
 Los PNG quedan en results/graficas/ (o en --out).
