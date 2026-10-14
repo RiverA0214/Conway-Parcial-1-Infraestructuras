@@ -1,13 +1,13 @@
-"""Tablero: título, imagen de n x n píxeles ampliada o reducida a LADO píxeles, y métricas propias."""
+"""Un tablero: título, imagen de n x n píxeles ampliada o reducida a LADO píxeles, pintado con el mouse y métricas propias."""
 
 import math
 import tkinter as tk
 
 import customtkinter as ctk
 
+from .render import to_ppm
+
 LADO = 400
-VIVA = bytes([52, 211, 153])
-MUERTA = bytes([17, 24, 39])
 
 
 def linea(i0, j0, i1, j1):
@@ -31,12 +31,10 @@ def linea(i0, j0, i1, j1):
 
 
 class Tablero(ctk.CTkFrame):
-    def __init__(self, master, al_empezar, al_pintar, al_terminar):
+    def __init__(self, master, al_pintar):
         super().__init__(master)
         self.n = 0
-        self.al_empezar = al_empezar
         self.al_pintar = al_pintar
-        self.al_terminar = al_terminar
         self.valor = 1
         self.anterior = None
         self.imagen = None
@@ -67,10 +65,9 @@ class Tablero(ctk.CTkFrame):
         self.canvas.delete("all")
         self.canvas.create_image(LADO // 2, LADO // 2, image=self.imagen_vista, anchor="center")
 
-    def dibujar(self, board):
-        # imagen PPM: cabecera + 3 bytes de color por célula, mucho más rápido que put() por píxel
-        pixeles = b"".join(VIVA if c else MUERTA for fila in board for c in fila)
-        self.imagen.configure(data=b"P6 %d %d 255\n" % (self.n, self.n) + pixeles, format="PPM")
+    def dibujar(self, raw):
+        # raw: n*n bytes con 0/1. La imagen tiene 1 píxel por célula y se escala al copiarla.
+        self.imagen.configure(data=to_ppm(raw, self.n), format="PPM")
         self.imagen_vista.blank()
         self.imagen_vista.tk.call(self.imagen_vista, "copy", self.imagen, *self.escala)
 
@@ -85,7 +82,6 @@ class Tablero(ctk.CTkFrame):
     def empezar(self, evento, valor):
         self.valor = valor
         self.anterior = None
-        self.al_empezar()
         self.mover(evento)
 
     def mover(self, evento):
@@ -96,4 +92,3 @@ class Tablero(ctk.CTkFrame):
 
     def terminar(self, evento):
         self.anterior = None
-        self.al_terminar()

@@ -42,9 +42,9 @@ Procesos: el worker 1 recibe una copia de las filas 249..500
 
 ### 2.3 Interfaz gráfica
 
-`gui.py` (customtkinter) simula el juego con dos motores sobre el mismo tablero: uno secuencial y uno paralelo, con el modo (hilos o procesos) y el número de workers que se elijan. Los tamaños disponibles son los del enunciado: 100x100, 500x500 y 1000x1000 (este último se dibuja reducido a la mitad para que quepa en pantalla), y los workers 1, 2, 4, 8 y 12, los mismos del benchmark. En cada generación se ejecuta primero el secuencial y después el paralelo, y se comparan los tableros resultantes; si difieren, la simulación se detiene y muestra un error. La ventana muestra el tablero, el número de generación y de células vivas, el tiempo de cálculo del último paso de cada motor con su speedup, y el acumulado de toda la corrida (sin contar el primer paso, que incluye calentamiento). También se puede pintar con clic, colocar patrones clásicos (glider, pulsar, cañón de Gosper…), generar tableros aleatorios y cambiar el retardo.
+El paquete `gui/` (customtkinter) simula el juego con dos motores sobre el mismo tablero: uno secuencial y uno paralelo, con el modo (hilos o procesos) y el número de workers que se elijan. Los tamaños disponibles son los del enunciado: 100x100, 500x500 y 1000x1000 (este último se dibuja reducido a la mitad para que quepa en pantalla), y los workers 1, 2, 4, 8 y 12, los mismos del benchmark. En cada generación se ejecuta primero el secuencial y después el paralelo, y se comparan los tableros resultantes; si difieren, la simulación se detiene y muestra un error. La ventana muestra el tablero, el número de generación y de células vivas, el tiempo de cálculo del último paso de cada motor con su speedup, y el acumulado de toda la corrida (sin contar el primer paso, que incluye calentamiento). También se puede pintar con clic, colocar patrones clásicos (glider, pulsar, cañón de Gosper…), generar tableros aleatorios y cambiar el retardo.
 
-Los tiempos de la interfaz sirven para ver el efecto en vivo, pero la medición de referencia es el paquete `benchmark` (sección 4): la interfaz mide un solo paso a la vez y comparte la CPU con el dibujo.
+Los tiempos de la interfaz sirven para ver el efecto en vivo, pero la medición de referencia es el paquete `benchmark` (sección 4): la interfaz calcula en un hilo aparte pero comparte la CPU con el dibujo y con el hilo de Tk.
 
 ## 3. Desafíos de la implementación paralela
 
@@ -244,7 +244,7 @@ Verificación de correctitud de los motores:
 Interfaz gráfica (usa el `.venv` del proyecto, CPython 3.14t free-threaded):
 
 ```
-.venv/bin/python gui.py
+.venv/bin/python -m gui
 ```
 
 Benchmark con los tres intérpretes y los tamaños de este informe; escribe JSON y CSV en `results/`:
