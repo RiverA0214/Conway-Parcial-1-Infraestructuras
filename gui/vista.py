@@ -5,8 +5,11 @@ Una sola Vista la comparten los dos tableros, así que siempre muestran la misma
 Escala = píxeles por célula (una fracción). Hay dos formas de mostrar el tablero:
   - recortada: la escala es un entero (x1, x2, x4...) y el tablero no cabe en el panel;
     se ve un recorte de `panel // zoom` células por lado y se puede desplazar.
-  - completa: el tablero entero cabe en el panel (nivel "ajustado" o tableros chicos);
+  - completa: el tablero entero cabe en el panel (nivel "ajustado");
     si la escala es menor que 1 se omiten células (subsample).
+
+"Ajustado" es la escala mínima: el tablero nunca se muestra más chico que el panel, así que
+no queda una zona vacía alrededor que habría que delimitar.
 """
 
 from fractions import Fraction
@@ -29,7 +32,7 @@ class Vista:
     def configurar(self, n: int):
         self.n = n
         ajustado = Fraction(self.panel, n)                     # escala a la que cabe completo
-        self.niveles = sorted({ajustado, *map(Fraction, ZOOMS)})
+        self.niveles = sorted({ajustado, *(Fraction(z) for z in ZOOMS if z >= ajustado)})
         # se arranca en la mayor escala <= max(1, ajustado): x1 si no cabe, o llenando el panel si sobra espacio
         inicial = max(e for e in self.niveles if e <= max(1, ajustado))
         self.nivel = self.niveles.index(inicial)
