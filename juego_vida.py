@@ -14,23 +14,17 @@ import threading
 def make_padded(n: int) -> list[list[int]]:
     return [[0] * (n + 2) for _ in range(n + 2)]
 
-def from_chars(rows: list[list[str]]) -> list[list[int]]:
-    # '*' -> 1, '.' -> 0, agregando el padding
-    n = len(rows)
-    mat = make_padded(n)
-    for i in range(n):
-        for j in range(n):
-            if rows[i][j] == '*':
-                mat[i + 1][j + 1] = 1
-    return mat
+def pad(rows: list[list[int]]) -> list[list[int]]:
+    # agrega el borde muerto a un tablero de n x n
+    zeros = [0] * (len(rows) + 2)
+    return [zeros[:]] + [[0, *row, 0] for row in rows] + [zeros[:]]
 
-def to_chars(mat: list[list[int]]) -> list[list[str]]:
-    n = len(mat) - 2
-    return [['*' if mat[i][j] else '.' for j in range(1, n + 1)] for i in range(1, n + 1)]
+def unpad(mat: list[list[int]]) -> list[list[int]]:
+    return [row[1:-1] for row in mat[1:-1]]
 
 def print_matrix(mat: list[list[int]]):
-    for row in to_chars(mat):
-        print("".join(row))
+    for row in unpad(mat):
+        print("".join(map(str, row)))
 
 def timeit(fn, *args):
     start = time.perf_counter()
@@ -221,31 +215,31 @@ def main(start_mat: list[list[int]]):
     print(f"mismo resultado: {result == result_par}")
 
 tablero_test = [
-    ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-    ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-    ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-    ['.', '.', '.', '*', '.', '.', '.', '.', '.', '.'],
-    ['.', '.', '.', '.', '*', '.', '.', '.', '.', '.'],
-    ['.', '.', '*', '*', '*', '.', '.', '.', '.', '.'],
-    ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-    ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-    ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
-    ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.']
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+    [0, 0, 1, 1, 1, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 ]
 tablero_pequeno = [
-    ['.', '.', '.', '.', '.'],
-    ['.', '.', '*', '.', '.'],
-    ['.', '.', '*', '.', '.'],
-    ['.', '.', '*', '.', '.'],
-    ['.', '.', '.', '.', '.']
+    [0, 0, 0, 0, 0],
+    [0, 0, 1, 0, 0],
+    [0, 0, 1, 0, 0],
+    [0, 0, 1, 0, 0],
+    [0, 0, 0, 0, 0]
 ]
 
 # matrix10x10
 if __name__ == '__main__':
     # with open('matrix.json', 'r') as file:
     #     data = json.load(file)
-    #     main(from_chars(data))
-    main(from_chars(tablero_test))
+    #     main(pad(data))
+    main(pad(tablero_test))
 
     # Para el análisis de rendimiento (tarda varios minutos con 1000x1000):
     results = benchmark()
