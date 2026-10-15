@@ -51,11 +51,11 @@ def default_interpreters(with_gil1: bool = False) -> list[dict]:
 
 def default_config() -> dict:
     return {
-        "sizes": [[100, 100], [200, 200], [400, 400], [800, 800]],
+        "sizes": [[100, 100], [500, 500], [1000, 1000]],
         "modes": list(MODES),
         "workers": [1, 2, 4, 8, 12],
-        "gens": 10,
-        "reps": 3,
+        "ciclos": 50,
+        "reps": 10,
         "warmup": 2,
         "density": 0.3,
         "seed": 42,

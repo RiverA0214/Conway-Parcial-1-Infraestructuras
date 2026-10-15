@@ -10,6 +10,7 @@ cargar), siempre con `self.lock`, así que nunca lo hacen a la vez.
 import threading
 from dataclasses import dataclass
 
+from life.cronometro import medir_ciclos, resumen
 from life.engines import make_engine
 
 
@@ -27,6 +28,18 @@ class Frame:
     error: str | None = None
 
 
+@dataclass
+class Resultado:
+    ciclos: int
+    total_seq: float           # s del bucle completo
+    total_par: float
+    ciclo_seq: tuple           # (promedio, desviación) en ms por ciclo
+    ciclo_par: tuple
+    speedup_ciclo: float
+    speedup_total: float
+    error: str | None = None
+
+
 class Simulador:
     def __init__(self, n: int, workers: int):
         self.n = n
@@ -35,10 +48,13 @@ class Simulador:
         self.retardo = 0.05              # s entre generaciones
         self.corriendo = False
         self.ultimo: Frame | None = None
+        self.resultado: Resultado | None = None   # última corrida de X ciclos
+        self.ocupado = False                      # corriendo X ciclos: ignora el resto de órdenes
 
         self.lock = threading.Lock()     # protege los motores
         self.cv = threading.Condition()  # despierta al hilo (iniciar, paso, cerrar)
         self.pasos_pedidos = 0
+        self.ciclos_pedidos = 0
         self.salir = False
         self.generacion = self.pasos = self.acum_seq = self.acum_par = 0
         self.t_seq = self.t_par = 0
@@ -51,7 +67,10 @@ class Simulador:
 
     def iniciar(self):
         with self.cv:
+            if self.ocupado:
+                return
             self.corriendo = True
+            self.pasos_pedidos = 0
             self.cv.notify()
 
     def pausar(self):
@@ -60,12 +79,25 @@ class Simulador:
 
     def un_paso(self):
         with self.cv:
-            if not self.corriendo:
+            if not self.corriendo and not self.ocupado:
                 self.pasos_pedidos += 1
                 self.cv.notify()
 
+    def correr_ciclos(self, x: int):
+        """Pausa y mide x ciclos en cada motor, desde el tablero actual. Se ejecuta en el hilo de simulación."""
+        with self.cv:
+            if self.ocupado or x < 1:
+                return
+            self.corriendo = False
+            self.ocupado = True
+            self.pasos_pedidos = 0
+            self.ciclos_pedidos = x
+            self.cv.notify()
+
     def cargar(self, grid):
         """Reemplaza el tablero (lista de filas o n*n bytes) en los dos motores y reinicia las métricas."""
+        if self.ocupado:
+            return
         self.pausar()
         with self.lock:
             self.seq.load(grid)
@@ -75,6 +107,8 @@ class Simulador:
             self.publicar()
 
     def pintar(self, celdas, valor: int):
+        if self.ocupado:
+            return
         self.pausar()
         with self.lock:
             for i, j in celdas:
@@ -91,19 +125,32 @@ class Simulador:
             self.salir = True
             self.corriendo = False
             self.cv.notify()
-        self.hilo.join()
-        self.seq.close()
-        self.par.close()
+        self.hilo.join(5)                # si está midiendo, el hilo cierra los motores al terminar
 
     # ---------- hilo de simulación ----------
 
     def bucle(self):
+        try:
+            self.repetir()
+        finally:
+            self.seq.close()
+            self.par.close()
+
+    def repetir(self):
         while True:
             with self.cv:
-                while not (self.salir or self.corriendo or self.pasos_pedidos):
+                while not (self.salir or self.corriendo or self.pasos_pedidos or self.ciclos_pedidos):
                     self.cv.wait()
                 if self.salir:
                     return
+                x, self.ciclos_pedidos = self.ciclos_pedidos, 0
+            if x:
+                try:
+                    with self.lock:
+                        self.medir(x)
+                finally:
+                    self.ocupado = False
+                continue
             with self.lock:
                 # la interfaz pudo pausar mientras esperábamos el lock
                 manual = self.pasos_pedidos > 0 and not self.corriendo
@@ -118,8 +165,8 @@ class Simulador:
 
     def avanzar(self):
         try:
-            r_seq = self.seq.step()
-            r_par = self.par.step()
+            t_seq = medir_ciclos(self.seq, 1)[1]
+            t_par = medir_ciclos(self.par, 1)[1]
             raw_seq, raw_par = self.seq.grid(), self.par.grid()
         except Exception as e:
             self.corriendo = False
@@ -127,7 +174,7 @@ class Simulador:
             return
         self.generacion += 1
         self.pasos += 1
-        self.t_seq, self.t_par = r_seq.compute_ns, r_par.compute_ns
+        self.t_seq, self.t_par = int(t_seq * 1e9), int(t_par * 1e9)
         if self.pasos > 1:
             self.acum_seq += self.t_seq
             self.acum_par += self.t_par
@@ -136,6 +183,31 @@ class Simulador:
             self.publicar("ERROR: los tableros secuencial y paralelo difieren", raw_seq, raw_par)
             return
         self.publicar(None, raw_seq, raw_par)
+
+    def medir(self, x):
+        # se llama con self.lock tomado; los dos motores parten del mismo tablero
+        try:
+            self.par.load(self.seq.grid())
+            medir_ciclos(self.seq, 1)        # un ciclo de calentamiento, como el benchmark
+            medir_ciclos(self.par, 1)
+            self.generacion += 1
+            tiempos_seq, total_seq = medir_ciclos(self.seq, x)
+            tiempos_par, total_par = medir_ciclos(self.par, x)
+            raw_seq, raw_par = self.seq.grid(), self.par.grid()
+        except Exception as e:
+            error = f"ERROR: {e}. Cambia tamaño/workers para recrear los motores."
+            self.resultado = Resultado(x, 0, 0, (0, 0), (0, 0), 0, 0, error)
+            self.publicar(error)
+            return
+        self.generacion += x
+        self.t_seq, self.t_par = int(tiempos_seq[-1] * 1e9), int(tiempos_par[-1] * 1e9)
+        ciclo_seq, ciclo_par = resumen(tiempos_seq), resumen(tiempos_par)
+        error = None if raw_seq == raw_par else "ERROR: los tableros secuencial y paralelo difieren"
+        self.resultado = Resultado(
+            x, total_seq, total_par,
+            (ciclo_seq[0] * 1000, ciclo_seq[1] * 1000), (ciclo_par[0] * 1000, ciclo_par[1] * 1000),
+            ciclo_seq[0] / ciclo_par[0], total_seq / total_par, error)
+        self.publicar(error, raw_seq, raw_par)
 
     def publicar(self, error=None, raw_seq=None, raw_par=None):
         # se llama con self.lock tomado

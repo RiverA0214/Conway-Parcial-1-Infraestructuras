@@ -9,8 +9,9 @@ from pathlib import Path
 from .config import RESULTS_DIR
 
 
-CSV_COLS = ["label", "rows", "cols", "mode", "workers", "gens", "reps", "setup_s", "median_s",
-            "min_s", "max_s", "step_ms", "speedup", "efficiency", "speedup_global", "valid", "hash"]
+CSV_COLS = ["label", "rows", "cols", "mode", "workers", "ciclos", "reps", "ciclo_ms_prom", "ciclo_ms_std",
+            "total_s_prom", "total_s_std", "speedup_ciclo", "speedup_total", "efficiency",
+            "speedup_global", "setup_s", "valid", "hash"]
 
 
 def save_results(result: dict, out: str | None = None) -> tuple[Path, Path]:
@@ -35,18 +36,20 @@ def print_table(result: dict):
         return
     print(f"\nCPU: {result['meta']['hardware']['cpu_model']} ({result['meta']['hardware']['cores']} cores)")
     for (r, c) in dict.fromkeys((x["rows"], x["cols"]) for x in filas):
-        print(f"\n=== {r}x{c} ({filas[0]['gens']} generaciones) ===")
-        print(f"{'intérprete':<24}{'modo':<11}{'w':>3}{'mediana s':>11}{'ms/gen':>9}"
-              f"{'speedup':>9}{'efic.':>7}{'global':>8}{'setup s':>9}  valid")
+        print(f"\n=== {r}x{c} ({filas[0]['ciclos']} ciclos, {filas[0]['reps']} reps) ===")
+        print(f"{'intérprete':<24}{'modo':<11}{'w':>3}{'ms/ciclo':>17}{'total s':>17}"
+              f"{'sp.ciclo':>9}{'sp.total':>9}{'efic.':>7}{'global':>8}  valid")
         for x in filas:
             if (x["rows"], x["cols"]) != (r, c):
                 continue
-            sp = f"{x['speedup']:.2f}" if x["speedup"] else "-"
+            sc = f"{x['speedup_ciclo']:.2f}" if x["speedup_ciclo"] else "-"
+            st = f"{x['speedup_total']:.2f}" if x["speedup_total"] else "-"
             ef = f"{x['efficiency']:.2f}" if x["efficiency"] else "-"
             gl = f"{x['speedup_global']:.2f}" if x["speedup_global"] else "-"
-            print(f"{x['label']:<24}{x['mode']:<11}{x['workers']:>3}{x['median_s']:>11.4f}"
-                  f"{x['step_ms']:>9.2f}{sp:>9}{ef:>7}{gl:>8}{x['setup_s']:>9.3f}  "
-                  f"{'ok' if x['valid'] else 'NO'}")
+            ciclo = f"{x['ciclo_ms_prom']:.2f} ± {x['ciclo_ms_std']:.2f}"
+            total = f"{x['total_s_prom']:.3f} ± {x['total_s_std']:.3f}"
+            print(f"{x['label']:<24}{x['mode']:<11}{x['workers']:>3}{ciclo:>17}{total:>17}"
+                  f"{sc:>9}{st:>9}{ef:>7}{gl:>8}  {'ok' if x['valid'] else 'NO'}")
 
 
 def print_event(ev: dict):

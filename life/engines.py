@@ -4,17 +4,8 @@ import os
 import sys
 import sysconfig
 import threading
-import time
-from dataclasses import dataclass
 
 from .core import empty_grid, from_bytes, split_rows, step_rows, to_bytes
-
-
-@dataclass
-class StepResult:
-    changed: int
-    alive: int
-    compute_ns: int
 
 
 class Engine:
@@ -32,11 +23,6 @@ class Engine:
 
     def grid(self):
         return to_bytes(self.board)
-
-    def step(self):
-        t0 = time.perf_counter_ns()
-        changed, alive = self.advance()
-        return StepResult(changed, alive, time.perf_counter_ns() - t0)
 
     def run(self, gens):
         for _ in range(gens):
@@ -60,7 +46,7 @@ class Engine:
 
 class ThreadEngine(Engine):
     # Hilos persistentes. Todos leen self.board (solo lectura) y cada uno calcula su
-    # bloque de filas. Barrier de workers + 1: el hilo que llama a step() también espera.
+    # bloque de filas. Barrier de workers + 1: el hilo que llama a advance() también espera.
     def __init__(self, rows, cols, workers):
         super().__init__(rows, cols, workers)
         self.ranges = split_rows(rows, workers)

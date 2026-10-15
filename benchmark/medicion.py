@@ -7,10 +7,10 @@ devuelve los resultados por stdout, una línea JSON por evento.
 import argparse
 import json
 import signal
-import statistics
 import sys
 import time
 
+from life.cronometro import medir_ciclos, resumen
 from life.core import grid_hash, random_grid
 from life.engines import make_engine, runtime_info
 
@@ -22,37 +22,39 @@ def emit(obj: dict):
 
 
 def measure_case(config, rows, cols, mode, workers, initial, expected_hash):
-    gens, reps = config["gens"], config["reps"]
+    ciclos, reps = config["ciclos"], config["reps"]
     t0 = time.perf_counter()
     engine = make_engine(mode, rows, cols, workers)
     setup_s = time.perf_counter() - t0
-    times, hashes = [], []
+    por_ciclo, totales, hashes = [], [], []
     try:
         engine.load(initial)
         engine.run(config["warmup"])              # calentamiento
         for _ in range(reps):
             engine.load(initial)
-            t = time.perf_counter()
-            engine.run(gens)
-            times.append(time.perf_counter() - t)
+            tiempos, total = medir_ciclos(engine, ciclos)
+            por_ciclo.extend(tiempos)
+            totales.append(total)
             hashes.append(grid_hash(engine.grid()))
     finally:
         engine.close()
     h = hashes[-1]
-    med = statistics.median(times)
+    ciclo_prom, ciclo_std = resumen(por_ciclo)
+    total_prom, total_std = resumen(totales)
     return {
         "rows": rows, "cols": cols, "mode": mode, "workers": workers,
-        "gens": gens, "reps": reps, "setup_s": setup_s, "times_s": times,
-        "median_s": med, "min_s": min(times), "max_s": max(times),
-        "step_ms": med / gens * 1000, "hash": h,
+        "ciclos": ciclos, "reps": reps,
+        "ciclo_ms_prom": ciclo_prom * 1000, "ciclo_ms_std": ciclo_std * 1000,
+        "total_s_prom": total_prom, "total_s_std": total_std, "totales_s": totales,
+        "setup_s": setup_s, "hash": h,
         "valid": all(x == expected_hash for x in hashes),
     }
 
 
-def reference_hash(initial, rows, cols, gens):
+def reference_hash(initial, rows, cols, ciclos):
     with make_engine("sequential", rows, cols, 1) as e:
         e.load(initial)
-        e.run(gens)
+        e.run(ciclos)
         return grid_hash(e.grid())
 
 
@@ -81,7 +83,7 @@ def worker_main(config: dict):
     done = 0
     for rows, cols in config["sizes"]:
         initial = random_grid(rows, cols, config["density"], config["seed"])
-        expected = reference_hash(initial, rows, cols, config["gens"])
+        expected = reference_hash(initial, rows, cols, config["ciclos"])
         for mode in config["modes"]:
             for w in ([1] if mode == "sequential" else config["workers"]):
                 emit({"event": "progress", "done": done, "total": total,

@@ -15,6 +15,7 @@ from .vista import Vista
 
 TAMANOS = {"100 × 100": 100, "500 × 500": 500, "1000 × 1000": 1000}   # filas × columnas
 WORKERS = ["1", "2", "4", "8", "12"]
+CICLOS = 50                # ciclos por defecto de "Correr X ciclos"
 REFRESCO_MS = 33           # la interfaz mira si hay un frame nuevo ~30 veces por segundo
 
 
@@ -26,6 +27,18 @@ def razon(a, b):
     return f"{a / b:.2f}x" if b else "-"
 
 
+def texto_resultado(r):
+    if r is None:
+        return ""
+    if not r.total_seq:
+        return r.error
+    texto = (f"{r.ciclos} ciclos | total secuencial {r.total_seq:.3f} s, paralelo {r.total_par:.3f} s | "
+            f"por ciclo: secuencial {r.ciclo_seq[0]:.2f} ± {r.ciclo_seq[1]:.2f} ms, "
+            f"paralelo {r.ciclo_par[0]:.2f} ± {r.ciclo_par[1]:.2f} ms\n"
+            f"Speedup por ciclo {r.speedup_ciclo:.2f}x | speedup en {r.ciclos} ciclos {r.speedup_total:.2f}x")
+    return f"{texto}\n{r.error}" if r.error else texto
+
+
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -33,6 +46,9 @@ class App(ctk.CTk):
         self.sim: Simulador | None = None
         self.n = 0
         self.dibujado = 0          # id del último frame dibujado
+        self.mostrado = None       # último Resultado de X ciclos mostrado
+        self.bloqueables = []      # controles que se deshabilitan mientras corre X ciclos
+        self.bloqueado = False
         self.vista = Vista(LADO)   # zoom y desplazamiento, compartidos por los dos tableros
         self.construir_controles()
         self.construir_tableros()
@@ -56,6 +72,12 @@ class App(ctk.CTk):
         self.boton(self.campo(barra, " "), "Limpiar", self.limpiar)
         self.boton(self.campo(barra, " "), "Paso", self.un_paso)
         self.boton_iniciar = self.boton(self.campo(barra, " "), "Iniciar", self.alternar_corriendo)
+        campo = self.campo(barra, "Ciclos")
+        self.ciclos = ctk.CTkEntry(campo, width=60)
+        self.ciclos.insert(0, str(CICLOS))
+        self.ciclos.pack(pady=2)
+        self.boton_ciclos = self.boton(self.campo(barra, " "), f"Correr {CICLOS} ciclos", self.correr_ciclos)
+        self.ciclos.bind("<KeyRelease>", lambda _: self.titular_boton())
         campo = self.campo(barra, "Retardo (ms)")
         self.retardo = ctk.CTkSlider(campo, from_=0, to=500, number_of_steps=50, width=110)
         self.retardo.set(50)
@@ -78,6 +100,8 @@ class App(ctk.CTk):
         self.vivas_txt = self.dato(franja, "Células vivas")
         self.speedup_ultimo = self.dato(franja, "Speedup último paso")
         self.speedup_acum = self.dato(franja, "Speedup acumulado", grande=True)
+        self.resultado_txt = ctk.CTkLabel(self, text="", justify="left")
+        self.resultado_txt.pack()
 
         info = runtime_info()
         gil = "activo" if info["gil_enabled"] else "desactivado"
@@ -108,11 +132,13 @@ class App(ctk.CTk):
         menu = ctk.CTkOptionMenu(self.campo(barra, titulo), values=valores, command=comando, width=ancho)
         menu.set(inicial)
         menu.pack()
+        self.bloqueables.append(menu)
         return menu
 
     def boton(self, padre, texto, comando):
         b = ctk.CTkButton(padre, text=texto, command=comando, width=80)
         b.pack()
+        self.bloqueables.append(b)
         return b
 
     # ---------- simulador ----------
@@ -131,6 +157,8 @@ class App(ctk.CTk):
         self.tab_seq.configurar(self.n)
         self.tab_par.configurar(self.n)
         self.error.configure(text="")
+        self.mostrado = None
+        self.resultado_txt.configure(text="")
         self.sim.cargar(random_grid(self.n, self.n))
 
     def redibujar(self):
@@ -156,9 +184,41 @@ class App(ctk.CTk):
             self.speedup_acum.configure(text=razon(frame.acum_seq, frame.acum_par))
             self.error.configure(text=frame.error or "")
         self.boton_iniciar.configure(text="Pausar" if self.sim.corriendo else "Iniciar")
+        self.mostrar_resultado()
         self.after(REFRESCO_MS, self.refrescar)
 
+    def mostrar_resultado(self):
+        ocupado = self.sim.ocupado
+        self.bloquear(ocupado)
+        r = self.sim.resultado
+        if ocupado:
+            self.resultado_txt.configure(text="Midiendo ciclos (1 de calentamiento + los pedidos)...")
+        elif r is not None and r is not self.mostrado:
+            self.mostrado = r
+            self.resultado_txt.configure(text=texto_resultado(r))
+
+    def bloquear(self, si):
+        if si == self.bloqueado:
+            return
+        self.bloqueado = si
+        for w in self.bloqueables:
+            w.configure(state="disabled" if si else "normal")
+
     # ---------- botones ----------
+
+    def ciclos_pedidos(self):
+        try:
+            return max(1, int(self.ciclos.get()))
+        except ValueError:
+            return CICLOS
+
+    def titular_boton(self):
+        self.boton_ciclos.configure(text=f"Correr {self.ciclos_pedidos()} ciclos")
+
+    def correr_ciclos(self):
+        self.sim.correr_ciclos(self.ciclos_pedidos())
+        if self.sim.ocupado:
+            self.bloquear(True)
 
     def aleatorio(self):
         self.sim.cargar(random_grid(self.n, self.n, seed=None))
@@ -167,6 +227,8 @@ class App(ctk.CTk):
         self.sim.cargar(empty_grid(self.n, self.n))
 
     def colocar(self):
+        if self.sim.ocupado:
+            return
         patron = PATTERNS[self.patron.get()]
         alto, ancho = len(patron), max(map(len, patron))
         self.sim.pausar()

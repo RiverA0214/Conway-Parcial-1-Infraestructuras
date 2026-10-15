@@ -15,14 +15,14 @@ def main():
     ap.add_argument("--sizes", help="ej. 100,200,200x300")
     ap.add_argument("--workers", help="ej. 1,2,4,8,12")
     ap.add_argument("--modes", help="ej. sequential,threads")
-    ap.add_argument("--gens", type=int)
+    ap.add_argument("--ciclos", type=int)
     ap.add_argument("--reps", type=int)
     ap.add_argument("--out", help="ruta del JSON (el CSV usa el mismo nombre)")
     args = ap.parse_args()
 
     cfg = default_config()
     if args.quick:
-        cfg.update(sizes=parse_sizes("40,80"), gens=3, reps=1, workers=[1, 2, 4])
+        cfg.update(sizes=parse_sizes("40,80"), ciclos=3, reps=1, workers=[1, 2, 4])
     if args.sizes:
         cfg["sizes"] = parse_sizes(args.sizes)
     if args.workers:
@@ -32,8 +32,8 @@ def main():
         malos = [m for m in cfg["modes"] if m not in MODES]
         if malos:
             ap.error(f"modos inválidos: {malos}")
-    if args.gens:
-        cfg["gens"] = args.gens
+    if args.ciclos:
+        cfg["ciclos"] = args.ciclos
     if args.reps:
         cfg["reps"] = args.reps
     cfg["interpreters"] = default_interpreters(args.with_gil1)

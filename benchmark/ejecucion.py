@@ -60,14 +60,16 @@ def run_interpreter(label, cmd, config, on_event, cancel):
 
 
 def add_speedups(rows: list[dict], baseline_label: str | None):
-    # speedup = T_seq / T (mismo intérprete); global = T_seq del intérprete base / T
-    seq = {(r["label"], r["rows"], r["cols"]): r["median_s"] for r in rows if r["mode"] == "sequential"}
+    # speedup = T_seq / T_par (mismo intérprete), por ciclo y en el total de X ciclos;
+    # global = total del secuencial del intérprete base / total
+    seq = {(r["label"], r["rows"], r["cols"]): r for r in rows if r["mode"] == "sequential"}
     for r in rows:
-        t_seq = seq.get((r["label"], r["rows"], r["cols"]))
-        t_glob = seq.get((baseline_label, r["rows"], r["cols"]))
-        r["speedup"] = t_seq / r["median_s"] if t_seq else None
-        r["efficiency"] = r["speedup"] / r["workers"] if r["speedup"] else None
-        r["speedup_global"] = t_glob / r["median_s"] if t_glob else None
+        s = seq.get((r["label"], r["rows"], r["cols"]))
+        g = seq.get((baseline_label, r["rows"], r["cols"]))
+        r["speedup_ciclo"] = s["ciclo_ms_prom"] / r["ciclo_ms_prom"] if s else None
+        r["speedup_total"] = s["total_s_prom"] / r["total_s_prom"] if s else None
+        r["efficiency"] = r["speedup_total"] / r["workers"] if s else None
+        r["speedup_global"] = g["total_s_prom"] / r["total_s_prom"] if g else None
 
 
 def hardware_info() -> dict:
