@@ -2,7 +2,7 @@
 
 import sys
 
-from .core import from_bytes, from_matrix, random_grid, step_rows, to_bytes, to_matrix
+from .core import empty_grid, from_bytes, from_matrix, random_grid, step_rows, to_bytes, to_matrix
 from .engines import make_engine
 from .patterns import place
 
@@ -34,10 +34,13 @@ def referencia(mat):
 
 
 def avanzar(grid, gens):
+    # el kernel solo, sin motores; trabaja sobre una copia para no modificar `grid`
     rows, cols = len(grid), len(grid[0])
+    leer, escribir = [fila[:] for fila in grid], empty_grid(rows, cols)
     for _ in range(gens):
-        grid = step_rows(grid, rows, cols, 0, rows)[0]
-    return grid
+        step_rows(leer, escribir, 0, rows)
+        leer, escribir = escribir, leer
+    return leer
 
 
 def con_patron(nombre, i, j, rows=12, cols=15):

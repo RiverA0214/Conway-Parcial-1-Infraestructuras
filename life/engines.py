@@ -1,4 +1,4 @@
-"""Motores: secuencial e hilos (Barrier). Los dos usan step_rows."""
+"""Motores: secuencial e hilos (Barrier). Los dos usan step_rows y dos tableros que se alternan (ping-pong)."""
 
 import os
 import sys
@@ -11,7 +11,8 @@ from .core import empty_grid, from_bytes, split_rows, step_rows, to_bytes
 class Engine:
     def __init__(self, rows, cols, workers=1):
         self.rows, self.cols, self.workers = rows, cols, workers
-        self.board = empty_grid(rows, cols)
+        self.board = empty_grid(rows, cols)    # generación actual
+        self.back = empty_grid(rows, cols)     # donde se escribe la siguiente; se alternan cada ciclo
 
     def load(self, buf):
         if isinstance(buf, (bytes, bytearray)):
@@ -30,8 +31,8 @@ class Engine:
 
     def advance(self):
         # calcula la siguiente generación; deja el resultado en self.board
-        new_rows, changed, alive = step_rows(self.board, self.rows, self.cols, 0, self.rows)
-        self.board = new_rows
+        changed, alive = step_rows(self.board, self.back, 0, self.rows)
+        self.board, self.back = self.back, self.board
         return changed, alive
 
     def close(self):
@@ -45,12 +46,13 @@ class Engine:
 
 
 class ThreadEngine(Engine):
-    # Hilos persistentes. Todos leen self.board (solo lectura) y cada uno calcula su
-    # bloque de filas. Barrier de workers + 1: el hilo que llama a advance() también espera.
+    # Hilos persistentes. Todos leen self.board (solo lectura) y cada uno escribe su bloque de
+    # filas en self.back (bloques disjuntos, sin carreras). Barrier de workers + 1: el hilo que
+    # llama a advance() también espera, y cuando todos terminan solo intercambia los dos tableros.
     def __init__(self, rows, cols, workers):
         super().__init__(rows, cols, workers)
         self.ranges = split_rows(rows, workers)
-        self.parts = [None] * workers      # cada hilo escribe solo su posición
+        self.results = [None] * workers    # (cambiadas, vivas) de cada bloque; cada hilo escribe solo su posición
         self.barrier = threading.Barrier(workers + 1)
         self.stop = False
         self.error = None
@@ -67,7 +69,7 @@ class ThreadEngine(Engine):
                 self.barrier.wait()        # espera la orden de empezar la generación
                 if self.stop:
                     return
-                self.parts[t] = step_rows(self.board, self.rows, self.cols, r0, r1)
+                self.results[t] = step_rows(self.board, self.back, r0, r1)
                 self.barrier.wait()        # espera a que todos terminen su bloque
         except threading.BrokenBarrierError:
             pass
@@ -85,8 +87,8 @@ class ThreadEngine(Engine):
             error = self.error
             self.close()
             raise error or RuntimeError("falló la barrera") from None
-        self.board = [fila for part in self.parts for fila in part[0]]
-        return sum(p[1] for p in self.parts), sum(p[2] for p in self.parts)
+        self.board, self.back = self.back, self.board    # los hilos esperan en la barrera: es seguro
+        return sum(r[0] for r in self.results), sum(r[1] for r in self.results)
 
     def close(self):
         if self.closed:
