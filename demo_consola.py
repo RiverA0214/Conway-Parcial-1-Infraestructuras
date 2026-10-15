@@ -5,7 +5,6 @@
 
 import time
 
-from life.cronometro import medir_ciclos
 from life.core import from_matrix, to_matrix
 from life.engines import make_engine
 
@@ -31,14 +30,14 @@ def simular(mode, mat, workers, max_steps, show):
             print_matrix(mat)
         while steps < max_steps:
             steps += 1
-            antes = engine.board
-            _, t = medir_ciclos(engine, 1)
-            total_s += t                      # solo el cálculo, sin imprimir
+            inicio = time.perf_counter()
+            changed, _ = engine.advance()
+            total_s += time.perf_counter() - inicio      # solo el cálculo, sin imprimir
             if show:
                 print(f"{steps = }")
                 print_matrix(to_matrix(engine.board))
                 time.sleep(0.5)
-            if engine.board == antes:
+            if changed == 0:
                 break
         return to_matrix(engine.board), total_s
 

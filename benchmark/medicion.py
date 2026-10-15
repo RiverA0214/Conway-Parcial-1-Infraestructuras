@@ -12,7 +12,8 @@ import time
 
 from life.cronometro import medir_ciclos, resumen
 from life.core import grid_hash, random_grid
-from life.engines import make_engine, runtime_info
+from life.engines import make_engine
+from life.runtime import runtime_info
 
 from .config import LABEL_FT, LABEL_FT_GIL1, LABEL_GIL, count_cases
 

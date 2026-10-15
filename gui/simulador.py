@@ -111,9 +111,8 @@ class Simulador:
             return
         self.pausar()
         with self.lock:
-            for i, j in celdas:
-                self.seq.board[i][j] = valor
-                self.par.board[i][j] = valor
+            self.seq.set_cells(celdas, valor)
+            self.par.set_cells(celdas, valor)
             self.publicar()
 
     def tablero(self) -> bytes:
