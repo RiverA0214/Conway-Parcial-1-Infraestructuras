@@ -10,7 +10,8 @@ cargar), siempre con `self.lock`, así que nunca lo hacen a la vez.
 import threading
 from dataclasses import dataclass
 
-from life.cronometro import medir_ciclos, resumen
+from life.comparacion import Resultado, comparar
+from life.cronometro import medir_ciclos
 from life.engines import make_engine
 
 
@@ -25,18 +26,6 @@ class Frame:
     acum_par: int
     seq: bytes                 # tablero secuencial, n*n bytes con 0/1
     par: bytes
-    error: str | None = None
-
-
-@dataclass
-class Resultado:
-    ciclos: int
-    total_seq: float           # s del bucle completo
-    total_par: float
-    ciclo_seq: tuple           # (promedio, desviación) en ms por ciclo
-    ciclo_par: tuple
-    speedup_ciclo: float
-    speedup_total: float
     error: str | None = None
 
 
@@ -186,27 +175,16 @@ class Simulador:
     def medir(self, x):
         # se llama con self.lock tomado; los dos motores parten del mismo tablero
         try:
-            self.par.load(self.seq.grid())
-            medir_ciclos(self.seq, 1)        # un ciclo de calentamiento, como el benchmark
-            medir_ciclos(self.par, 1)
-            self.generacion += 1
-            tiempos_seq, total_seq = medir_ciclos(self.seq, x)
-            tiempos_par, total_par = medir_ciclos(self.par, x)
-            raw_seq, raw_par = self.seq.grid(), self.par.grid()
+            self.resultado = comparar(self.seq, self.par, x)
         except Exception as e:
             error = f"ERROR: {e}. Cambia tamaño/workers para recrear los motores."
             self.resultado = Resultado(x, 0, 0, (0, 0), (0, 0), 0, 0, error)
             self.publicar(error)
             return
-        self.generacion += x
-        self.t_seq, self.t_par = int(tiempos_seq[-1] * 1e9), int(tiempos_par[-1] * 1e9)
-        ciclo_seq, ciclo_par = resumen(tiempos_seq), resumen(tiempos_par)
-        error = None if raw_seq == raw_par else "ERROR: los tableros secuencial y paralelo difieren"
-        self.resultado = Resultado(
-            x, total_seq, total_par,
-            (ciclo_seq[0] * 1000, ciclo_seq[1] * 1000), (ciclo_par[0] * 1000, ciclo_par[1] * 1000),
-            ciclo_seq[0] / ciclo_par[0], total_seq / total_par, error)
-        self.publicar(error, raw_seq, raw_par)
+        r = self.resultado
+        self.generacion += x + 1             # los x ciclos medidos más el de calentamiento
+        self.t_seq, self.t_par = int(r.ultimo_seq * 1e9), int(r.ultimo_par * 1e9)
+        self.publicar(r.error)
 
     def publicar(self, error=None, raw_seq=None, raw_par=None):
         # se llama con self.lock tomado
