@@ -1,7 +1,7 @@
 [project]
 name = "juego-vida"
 version = "0.1.0"
-description = "Juego de la Vida: motores secuencial, hilos y procesos (parcial)"
+description = "Juego de la Vida: motores secuencial e hilos (parcial)"
 requires-python = ">=3.13"
 dependencies = [
     "customtkinter>=5",

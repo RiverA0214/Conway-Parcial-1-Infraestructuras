@@ -28,10 +28,10 @@ class Frame:
 
 
 class Simulador:
-    def __init__(self, n: int, modo: str, workers: int):
+    def __init__(self, n: int, workers: int):
         self.n = n
         self.seq = make_engine("sequential", n, n)
-        self.par = make_engine(modo, n, n, workers)
+        self.par = make_engine("threads", n, n, workers)
         self.retardo = 0.05              # s entre generaciones
         self.corriendo = False
         self.ultimo: Frame | None = None
@@ -123,7 +123,7 @@ class Simulador:
             raw_seq, raw_par = self.seq.grid(), self.par.grid()
         except Exception as e:
             self.corriendo = False
-            self.publicar(f"ERROR: {e}. Cambia tamaño/modo/workers para recrear los motores.")
+            self.publicar(f"ERROR: {e}. Cambia tamaño/workers para recrear los motores.")
             return
         self.generacion += 1
         self.pasos += 1

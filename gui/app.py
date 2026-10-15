@@ -14,7 +14,6 @@ from .tablero import LADO, Tablero
 from .vista import Vista
 
 TAMANOS = {"100 × 100": 100, "500 × 500": 500, "1000 × 1000": 1000}   # filas × columnas
-MODOS = {"Hilos": "threads", "Procesos": "processes"}
 WORKERS = ["1", "2", "4", "8", "12"]
 REFRESCO_MS = 33           # la interfaz mira si hay un frame nuevo ~30 veces por segundo
 
@@ -48,7 +47,6 @@ class App(ctk.CTk):
         barra = ctk.CTkFrame(self)
         barra.pack(fill="x", padx=8, pady=(8, 0))
         self.tamano = self.opcion(barra, "Tamaño (filas × columnas)", list(TAMANOS), "100 × 100", 120)
-        self.modo = self.opcion(barra, "Modo", list(MODOS), "Hilos", 100)
         self.workers = self.opcion(barra, "Workers", WORKERS, "4", 70)
         self.patron = self.opcion(barra, "Patrón", list(PATTERNS), "glider", 110, recrear=False)
         self.boton(self.campo(barra, " "), "Colocar", self.colocar)
@@ -120,15 +118,15 @@ class App(ctk.CTk):
     # ---------- simulador ----------
 
     def recrear(self):
-        # nuevo tamaño, modo o workers: se crea otro simulador (con motores nuevos)
+        # nuevo tamaño o workers: se crea otro simulador (con motores nuevos)
         if self.sim:
             self.sim.cerrar()
         self.n = TAMANOS[self.tamano.get()]
         workers = int(self.workers.get())
-        self.sim = Simulador(self.n, MODOS[self.modo.get()], workers)
+        self.sim = Simulador(self.n, workers)
         self.dibujado = 0          # el simulador nuevo numera sus frames desde 1
         self.cambiar_retardo(self.retardo.get())
-        self.tab_par.titulo.configure(text=f"Paralelo: {self.modo.get()} x{workers}")
+        self.tab_par.titulo.configure(text=f"Paralelo: hilos x{workers}")
         self.vista.configurar(self.n)
         self.tab_seq.configurar(self.n)
         self.tab_par.configurar(self.n)

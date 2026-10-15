@@ -14,7 +14,7 @@ def main():
     ap.add_argument("--with-gil1", action="store_true", help="añade python3.14t con -X gil=1")
     ap.add_argument("--sizes", help="ej. 100,200,200x300")
     ap.add_argument("--workers", help="ej. 1,2,4,8,12")
-    ap.add_argument("--modes", help="ej. sequential,threads,processes")
+    ap.add_argument("--modes", help="ej. sequential,threads")
     ap.add_argument("--gens", type=int)
     ap.add_argument("--reps", type=int)
     ap.add_argument("--out", help="ruta del JSON (el CSV usa el mismo nombre)")

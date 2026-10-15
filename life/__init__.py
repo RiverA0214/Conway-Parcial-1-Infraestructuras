@@ -1,1 +1,1 @@
-"""Juego de la Vida: núcleo, patrones y motores (secuencial, hilos, procesos)."""
+"""Juego de la Vida: núcleo, patrones y motores (secuencial e hilos)."""

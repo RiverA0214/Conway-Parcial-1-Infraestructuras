@@ -1,6 +1,5 @@
-"""Motores: secuencial, hilos (Barrier) y procesos (Pool). Todos usan step_rows."""
+"""Motores: secuencial e hilos (Barrier). Los dos usan step_rows."""
 
-import multiprocessing
 import os
 import sys
 import sysconfig
@@ -9,8 +8,6 @@ import time
 from dataclasses import dataclass
 
 from .core import empty_grid, from_bytes, split_rows, step_rows, to_bytes
-
-PROCESS_TIMEOUT = 60       # s por generación; si se pasa, se cierra el pool
 
 
 @dataclass
@@ -119,43 +116,6 @@ class ThreadEngine(Engine):
             th.join(5)
 
 
-def block_job(job):
-    # se ejecuta en otro proceso; recibe copias de sus filas (con borde) y devuelve las nuevas
-    sub, cols, r0, r1 = job
-    return step_rows(sub, len(sub), cols, r0, r1)
-
-
-class ProcessEngine(Engine):
-    # Pool persistente. A cada proceso se le manda su bloque más una fila de borde
-    # arriba y abajo (los vecinos de las filas de las puntas viven en otro bloque).
-    def __init__(self, rows, cols, workers):
-        super().__init__(rows, cols, workers)
-        self.ranges = split_rows(rows, workers)
-        self.pool = multiprocessing.get_context("forkserver").Pool(workers)
-
-    def advance(self):
-        if self.pool is None:
-            raise RuntimeError("el motor está cerrado")
-        jobs = []
-        for a, b in self.ranges:
-            top = max(a - 1, 0)
-            sub = self.board[top:min(b + 1, self.rows)]
-            jobs.append((sub, self.cols, a - top, b - top))
-        try:
-            parts = self.pool.map_async(block_job, jobs, chunksize=1).get(PROCESS_TIMEOUT)
-        except multiprocessing.TimeoutError:
-            self.close()
-            raise RuntimeError(f"los procesos no respondieron en {PROCESS_TIMEOUT} s") from None
-        self.board = [fila for part in parts for fila in part[0]]
-        return sum(p[1] for p in parts), sum(p[2] for p in parts)
-
-    def close(self):
-        if self.pool is not None:
-            self.pool.terminate()
-            self.pool.join()
-            self.pool = None
-
-
 def make_engine(mode, rows, cols, workers=1):
     if mode == "sequential":
         return Engine(rows, cols, 1)
@@ -163,8 +123,6 @@ def make_engine(mode, rows, cols, workers=1):
         raise ValueError("workers debe ser >= 1")
     if mode == "threads":
         return ThreadEngine(rows, cols, workers)
-    if mode == "processes":
-        return ProcessEngine(rows, cols, workers)
     raise ValueError(f"modo desconocido: {mode!r}")
 
 

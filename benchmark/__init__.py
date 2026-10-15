@@ -1,4 +1,4 @@
-"""Benchmark: secuencial vs hilos vs procesos, en varios intérpretes de Python.
+"""Benchmark: secuencial vs hilos, con y sin GIL de Python.
 
     python -m benchmark              # completo (estimado: 4-6 min con ambos intérpretes)
     python -m benchmark --quick      # prueba rápida (unos segundos)

@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = ROOT / "results"
 
-MODES = ("sequential", "threads", "processes")
+MODES = ("sequential", "threads")
 LABEL_GIL = "3.14 (GIL)"
 LABEL_FT = "3.14t (free-threaded)"
 LABEL_FT_GIL1 = "3.14t (GIL=1)"

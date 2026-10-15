@@ -73,12 +73,11 @@ def comparar_motores():
         e.run(gens)
         esperado = e.grid()
     reporte("secuencial == kernel", esperado == to_bytes(avanzar(g, gens)))
-    for modo in ("threads", "processes"):
-        for w in (1, 2, 3, 4, 7):
-            with make_engine(modo, rows, cols, w) as e:
-                e.load(to_bytes(g))
-                e.run(gens)
-                reporte(f"{modo} workers={w} == secuencial", e.grid() == esperado)
+    for w in (1, 2, 3, 4, 7):
+        with make_engine("threads", rows, cols, w) as e:
+            e.load(to_bytes(g))
+            e.run(gens)
+            reporte(f"threads workers={w} == secuencial", e.grid() == esperado)
 
 
 def main():

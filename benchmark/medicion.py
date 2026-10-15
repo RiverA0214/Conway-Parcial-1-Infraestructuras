@@ -70,7 +70,7 @@ def runtime_error(label, info):
 
 
 def worker_main(config: dict):
-    signal.signal(signal.SIGTERM, lambda *_: sys.exit(1))      # para que los motores cierren sus hilos/procesos
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(1))      # para que los motores cierren sus hilos
     info = runtime_info()
     emit({"event": "runtime", "info": info})
     error = runtime_error(config["label"], info)

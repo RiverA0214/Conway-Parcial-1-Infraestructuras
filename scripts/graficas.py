@@ -1,10 +1,11 @@
-"""Genera las gráficas del informe a partir del JSON de `python -m benchmark`.
+"""Genera las gráficas del informe a partir del JSON o CSV de `python -m benchmark`.
 
 Uso: uv run --no-project --with matplotlib python scripts/graficas.py results/bench-XXXX.json
 Los PNG quedan en results/graficas/ (o en --out).
 """
 
 import argparse
+import csv
 import json
 from pathlib import Path
 
@@ -13,10 +14,10 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-COLOR = {"sequential": "#a78bfa", "threads": "#fbbf24", "threads_ft": "#34d399", "processes": "#38bdf8"}
+COLOR = {"sequential": "#a78bfa", "threads": "#fbbf24", "threads_ft": "#34d399"}
 ESTILO = {"3.14 (GIL)": "-", "3.14t (free-threaded)": "--", "3.14t (GIL=1)": ":"}
 MARCA = {"3.14 (GIL)": "o", "3.14t (free-threaded)": "s", "3.14t (GIL=1)": "^"}
-MODO = {"sequential": "Secuencial", "threads": "Hilos", "processes": "Procesos"}
+MODO = {"sequential": "Secuencial", "threads": "Hilos"}
 FT = "3.14t (free-threaded)"
 
 
@@ -30,9 +31,22 @@ def etiqueta(modo, interp):
     return f"{MODO[modo]} - {interp}"
 
 
+def fila_csv(f):
+    for campo in ("rows", "workers"):
+        f[campo] = int(f[campo])
+    for campo in ("step_ms", "speedup", "efficiency"):
+        f[campo] = float(f[campo])
+    return f
+
+
 def cargar(ruta):
-    filas = json.loads(Path(ruta).read_text())["rows"]
-    return {(f["label"], f["mode"], f["rows"], f["workers"]): f for f in filas}
+    ruta = Path(ruta)
+    if ruta.suffix == ".csv":
+        filas = [fila_csv(f) for f in csv.DictReader(ruta.open())]
+    else:
+        filas = json.loads(ruta.read_text())["rows"]
+    return {(f["label"], f["mode"], f["rows"], f["workers"]): f for f in filas
+            if f["mode"] in MODO}
 
 
 def serie(datos, interp, modo, n, campo):
@@ -67,7 +81,7 @@ def lineas(datos, interps, modos, n, campo):
 
 
 def g_speedup(datos, interps, n, out, nombre):
-    fig, ax = lineas(datos, interps, ["threads", "processes"], n, "speedup")
+    fig, ax = lineas(datos, interps, ["threads"], n, "speedup")
     ws = sorted({k[3] for k in datos})
     ax.plot(ws, ws, color="#6b7280", linewidth=1.2, linestyle="-.", label="Ideal (lineal)")
     ax.set_xticks(ws)
@@ -77,7 +91,7 @@ def g_speedup(datos, interps, n, out, nombre):
 
 
 def g_eficiencia(datos, interps, n, out):
-    fig, ax = lineas(datos, interps, ["threads", "processes"], n, "efficiency")
+    fig, ax = lineas(datos, interps, ["threads"], n, "efficiency")
     ws = sorted({k[3] for k in datos})
     ax.axhline(1, color="#6b7280", linewidth=1.2, linestyle="-.", label="Ideal (1.0)")
     ax.set_xticks(ws)
@@ -88,7 +102,7 @@ def g_eficiencia(datos, interps, n, out):
 
 def g_tamano(datos, interps, tamanos, out):
     fig, ax = plt.subplots(figsize=(8, 5.2))
-    for modo in ["sequential", "threads", "processes"]:
+    for modo in ["sequential", "threads"]:
         for it in interps:
             ys = []
             for n in tamanos:
@@ -110,7 +124,7 @@ def g_tamano(datos, interps, tamanos, out):
 def g_barras(datos, interps, n, w, out):
     fig, ax = plt.subplots(figsize=(9, 5.4))
     items = [("sequential", it, 1) for it in interps]
-    items += [(m, it, w) for m in ("threads", "processes") for it in interps]
+    items += [(m, it, w) for m in ("threads",) for it in interps]
     for i, (modo, it, ww) in enumerate(items):
         v = datos[(it, modo, n, ww)]["step_ms"]
         ax.bar(i, v, color=color(modo, it), edgecolor="#374151",
