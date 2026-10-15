@@ -189,6 +189,9 @@ def main():
     w = 8 if 8 in workers else workers[-1]
     g_speedup(datos, interps, n1, out, f"01_speedup_{n1}.png")
     g_speedup(datos, interps, n2, out, f"02_speedup_{n2}.png")
+    if len(tamanos) > 2:
+        n3 = tamanos[0]
+        g_speedup(datos, interps, n3, out, f"08_speedup_{n3}.png")       # el tablero chico: domina la sincronización
     g_eficiencia(datos, interps, n1, out)
     g_tamano(datos, interps, tamanos, out)
     g_barras(datos, interps, n1, w, out)
