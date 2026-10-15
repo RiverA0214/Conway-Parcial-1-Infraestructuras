@@ -5,7 +5,7 @@
 
 import time
 
-from life.core import from_matrix, to_matrix
+from life.grid import from_matrix, to_matrix
 from life.engines import make_engine
 
 # . muerta

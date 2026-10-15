@@ -2,7 +2,8 @@
 
 import sys
 
-from .core import empty_grid, from_bytes, from_matrix, random_grid, step_rows, to_bytes, to_matrix
+from .core import step_rows
+from .grid import empty_grid, from_bytes, from_matrix, random_grid, to_bytes, to_matrix
 from .engines import make_engine
 from .patterns import place
 

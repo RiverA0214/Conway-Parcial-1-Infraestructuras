@@ -5,9 +5,6 @@ actualiza el tablero que se está leyendo, porque cada célula debe ver la gener
 completa, no los valores que otras ya cambiaron.
 """
 
-import hashlib
-import random
-
 
 def step_rows(read, write, r0, r1):
     """Calcula las filas [r0, r1) de la siguiente generación.
@@ -36,45 +33,3 @@ def step_rows(read, write, r0, r1):
             if vive != mid[j + 1]:
                 changed += 1
     return changed, alive
-
-
-def empty_grid(rows, cols):
-    return [[0] * cols for _ in range(rows)]
-
-
-def random_grid(rows, cols, density=0.3, seed=42):
-    rng = random.Random(seed)
-    return [[1 if rng.random() < density else 0 for _ in range(cols)] for _ in range(rows)]
-
-
-def to_bytes(grid):
-    return b"".join(bytes(fila) for fila in grid)
-
-
-def from_bytes(buf, rows, cols):
-    return [list(buf[i * cols:(i + 1) * cols]) for i in range(rows)]
-
-
-def grid_hash(grid):
-    return hashlib.blake2b(to_bytes(grid), digest_size=16).hexdigest()
-
-
-def from_matrix(mat):
-    """Matriz de '*'/'.' -> tablero de 0/1."""
-    return [[1 if c == '*' else 0 for c in fila] for fila in mat]
-
-
-def to_matrix(grid):
-    return [['*' if c else '.' for c in fila] for fila in grid]
-
-
-def split_rows(rows, n):
-    """Reparte las filas en n bloques [inicio, fin) lo más parejos posible."""
-    base, extra = divmod(rows, n)
-    ranges = []
-    start = 0
-    for t in range(n):
-        end = start + base + (1 if t < extra else 0)
-        ranges.append((start, end))
-        start = end
-    return ranges

@@ -5,7 +5,7 @@ No calcula nada: le pide al Simulador que avance y dibuja el último frame que e
 
 import customtkinter as ctk
 
-from life.core import empty_grid, random_grid
+from life.grid import empty_grid, random_grid
 from life.runtime import runtime_info
 from life.patterns import PATTERNS, place
 

@@ -11,7 +11,7 @@ import sys
 import time
 
 from life.cronometro import medir_ciclos, resumen
-from life.core import grid_hash, random_grid
+from life.grid import grid_hash, random_grid
 from life.engines import make_engine
 from life.runtime import runtime_info
 

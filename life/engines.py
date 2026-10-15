@@ -2,7 +2,20 @@
 
 import threading
 
-from .core import empty_grid, from_bytes, split_rows, step_rows, to_bytes
+from .core import step_rows
+from .grid import empty_grid, from_bytes, to_bytes
+
+
+def split_rows(rows, n):
+    """Reparte las filas en n bloques [inicio, fin) lo más parejos posible."""
+    base, extra = divmod(rows, n)
+    ranges = []
+    start = 0
+    for t in range(n):
+        end = start + base + (1 if t < extra else 0)
+        ranges.append((start, end))
+        start = end
+    return ranges
 
 
 class Engine:
