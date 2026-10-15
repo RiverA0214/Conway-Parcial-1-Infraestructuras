@@ -48,7 +48,7 @@ La GUI tiene un botón **"Correr X ciclos"** (50 por defecto) que corre el secue
 - **Sincronización entre generaciones.** El hilo principal no puede unir los bloques ni empezar la generación siguiente hasta que todos terminen. Con `join` habría que crear hilos nuevos en cada generación; con la barrera los hilos son persistentes y solo esperan. El costo es que cada generación espera al hilo más lento.
 - **Errores y bloqueos.** Si un hilo falla, los demás quedarían esperando en la barrera para siempre. El hilo que falla guarda la excepción y llama a `barrier.abort()`, lo que despierta a todos con `BrokenBarrierError`; el hilo principal relanza el error original.
 - **El GIL.** En CPython normal el código es correcto con hilos pero no se acelera, porque solo un hilo ejecuta bytecode a la vez (sección 6.1). Para medir paralelismo real hizo falta el build free-threaded 3.14t con `-X gil=0`.
-- **Validación.** El benchmark compara el hash blake2b del tablero final de cada caso con el del secuencial (`valid`), y `python -m life.check` compara los motores con una implementación de referencia. Los 36 casos medidos dieron `valid = true`.
+- **Validación.** El benchmark compara el hash blake2b del tablero final de cada caso con el del secuencial (`valid`), y `python -m unittest` compara los motores con una implementación de referencia. Los 36 casos medidos dieron `valid = true`.
 
 ## 4. Entorno
 
@@ -206,7 +206,7 @@ Con 2 a 4 hilos `s` está entre 0.09 y 0.11; con 8 a 12 sube a 0.15-0.19, lo que
 Verificación de correctitud de los motores:
 
 ```
-.venv/bin/python -m life.check
+.venv/bin/python -m unittest
 ```
 
 Benchmark completo (3.14 con GIL y 3.14t con `-X gil=0`; tamaños, workers, 50 ciclos y 10 repeticiones por defecto). Escribe JSON y CSV en `results/`. Flags útiles: `--ciclos N`, `--reps N`, `--quick` (prueba rápida), `--sizes`, `--workers`, `--out`.
